@@ -75,8 +75,10 @@ function assignUnknown(a, b, c){
 
 
 
-function getRandomInt(min, max) {
-    // the maximum is exclusive and the minimum is inclusive
+function getRandomInt(min, max){
+    /*
+        Return a random integer in the range, where min is inclusive and max is exclusive.
+    */
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
@@ -84,21 +86,22 @@ function getRandomInt(min, max) {
 
 
 
-function nextMultiplicationProblem(){
+function getRandomIntForMultiply(){
+    /*
+        Return a random integer 0-9, and 0-9 multiplied by powers of 10.
+    */
     var a = getRandomInt(1,17);
-    if(a == 1) a = getRandomInt(1,6);
-    else if(a > 12) a = getRandomInt(6,10);
-    if(a > 10){
-        a = Math.floor(Math.random() * 8 + 1) * 10 ** (a-10);
-    }
-    
-    var b = getRandomInt(1,17);
-    if(b == 1) b = getRandomInt(1,6);
-    else if(b > 12) b = getRandomInt(6,10);
-    if(b > 10){
-        b = Math.floor(Math.random() * 8 + 1) * 10 ** (b-10);
-    }
-    
+    if(a == 1) a = getRandomInt(1,6);          // re-roll the value 1
+    else if(a > 12) a -= 4;                    // 10 => x10, 11 => x100, 12 => x1000
+    if(a > 10) a = getRandomInt(1,10) * 10 ** (a-9);
+    return a;
+}
+
+
+
+function nextMultiplicationProblem(){
+    var a = getRandomIntForMultiply();
+    var b = getRandomIntForMultiply();
     var c = a * b;
     
     $('#op').html("&sdot;");
@@ -108,8 +111,8 @@ function nextMultiplicationProblem(){
 
 
 function nextDivisionProblem(){
-    var a = getRandomInt(1,11);
-    var b = getRandomInt(1,11);
+    var a = getRandomIntForMultiply();
+    var b = getRandomIntForMultiply();
     var c = a * b;
     
     $('#op').html(":");
@@ -168,15 +171,15 @@ function nextSubtractionProblem(){
 
 
 function nextProblem(){
-    var choice = getRandomInt(1,5);
+    var choice = getRandomInt(1,7);
     
-    if(choice == 1){
+    if(choice == 1 || choice == 2){
         nextMultiplicationProblem();
-    }else if(choice == 2){
+    }else if(choice == 3 || choice == 4){
         nextDivisionProblem();
-    }else if(choice == 3){
+    }else if(choice == 5){
         nextAdditionProblem();
-    }else if(choice == 4){
+    }else if(choice == 6){
         nextSubtractionProblem();
     }else{
         alert("Invalid random number "+choice+".");
@@ -237,8 +240,8 @@ function sameProblem(){
 
 
 function shuffleList(o) {
-	for(var j, x, i = o.length; i; j = parseInt(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
-	return o;
+    for(var j, x, i = o.length; i; j = parseInt(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
+    return o;
 }
 
 
