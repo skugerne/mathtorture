@@ -13,7 +13,31 @@ var base_increment = 100.0 / problems;
 
 
 function initPage(){
-    $(document).keypress(keypressFunc);
+    window.addEventListener("keydown", function (event) {
+        if (event.defaultPrevented) {
+            return; // Should do nothing if the default action has been cancelled
+        }
+        
+        var handled = false;
+        if (event.keyCode !== undefined) {
+            // Handle the event with KeyboardEvent.keyCode and set handled true.
+            handled = keypressFunc(event.keyCode);
+        } else if (event.key !== undefined) {
+            // Handle the event with KeyboardEvent.key and set handled true.
+            alert("Not supported: event.key");
+        } else if (event.keyIdentifier !== undefined) {
+            // Handle the event with KeyboardEvent.keyIdentifier and set handled true.
+            alert("Not supported: event.keyIdentifier");
+        } else {
+            alert("Not supported: anything ??");
+        }
+
+        if (handled) {
+            // Suppress "double action" if event handled
+            event.preventDefault();
+        }
+    }, true);
+
     setInterval(eatScore,score_drop_interval_ms);
     nextProblem();
 };
@@ -225,10 +249,9 @@ function toHex(d) {
 
 
 
-function keypressFunc(event){
-    var x = event.charCode || event.keyCode;
+function keypressFunc(x){
     var is = $(unknown.idname).html();
-    
+
     if(x >= 48 && x <= 57){
         // number key pressed: 0 == 48, 1 == 49, etc
         x -= 48;
@@ -239,7 +262,7 @@ function keypressFunc(event){
             is += x;
         }
         $(unknown.idname).html(is);
-    }else if(x == 8){
+    }else if(x == 8 || x == 46){
         // this is the regular delete key
         is = is.slice(0,-1);
         if(is == ""){ is = "?"; }
@@ -260,7 +283,11 @@ function keypressFunc(event){
             floating_score -= floating_wrong_decrement;
             setTimeout(sameProblem,500);   // show for half second
         }
+    }else{
+        return false;
     }
+
+    return true;
 }
 
 
