@@ -1,12 +1,12 @@
 var number1 = {val: null, idstring: null};
 var number2 = {val: null, idstring: null};
 var unknown = {val: null, idstring: null};
-var problems = 200.0;
+var problems = 100.0;
 var floating_score = 0;
 var base_score = 0;
-var score_drop_interval_ms = 250;
+var score_drop_interval_ms = 250;                // rate that bonus decays
 var incremental_score_drop = 5.5 / problems;
-var floating_increment = 0.0 / problems;         // could be 500.0 / problems
+var floating_increment = 0.0 / problems;         // suggested bonus: 500.0 / problems
 var floating_wrong_decrement = 100.0 / problems;
 var base_increment = 100.0 / problems;
 
@@ -44,8 +44,22 @@ function initPage(){
 
 
 
+function getRandomInt(min, max){
+    /*
+        Return a random integer in the range, where min is inclusive and max is exclusive.
+    */
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
+
+
 function assignUnknown(a, b, c){
-    var choice = Math.floor(Math.random() * 4 + 1);
+    /*
+    The unknown (shown as '?') can be in any of the three positions.
+    */
+    var choice = getRandomInt(1,6);
     
     if(choice == 1 || choice == 2 || choice == 3){
         number1.idname = '#number1';
@@ -75,48 +89,46 @@ function assignUnknown(a, b, c){
 
 
 
-function getRandomInt(min, max){
+function getRandomForMultiply(){
     /*
-        Return a random integer in the range, where min is inclusive and max is exclusive.
+        Return a random Decimal object 0-9, and 0-9 multiplied by powers of 10.
     */
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min)) + min;
-}
-
-
-
-function getRandomIntForMultiply(){
-    /*
-        Return a random integer 0-9, and 0-9 multiplied by powers of 10.
-    */
-    var a = getRandomInt(1,17);
-    if(a == 1) a = getRandomInt(1,6);          // re-roll the value 1
-    else if(a > 12) a -= 4;                    // 10 => x10, 11 => x100, 12 => x1000
-    if(a > 10) a = getRandomInt(1,10) * 10 ** (a-9);
+    
+    var a = new Decimal(getRandomInt(1,10));
+    var b = new Decimal(getRandomInt(1,10));
+    if(b != 4 && b < 8){
+        // a *= 10 ** (4-b)
+        // so for b == 5, a is divided by 10
+        //        b == 6, a is divided by 100
+        //        b == 7, a is divided by 1000
+        //        b == 1, a is multiplied by 1000
+        //        b == 2, a is multiplied by 100
+        //        b == 3, a is multiplied by 10
+        a = a.times(new Decimal(10).toPower(b.minus(4).negated()));
+    }
     return a;
 }
 
 
 
 function nextMultiplicationProblem(){
-    var a = getRandomIntForMultiply();
-    var b = getRandomIntForMultiply();
-    var c = a * b;
+    var a = getRandomForMultiply();
+    var b = getRandomForMultiply();
+    var c = a.times(b);
     
     $('#op').html("&sdot;");
-    assignUnknown(a,b,c);
+    assignUnknown(a.toString(),b.toString(),c.toString());
 }
 
 
 
 function nextDivisionProblem(){
-    var a = getRandomIntForMultiply();
-    var b = getRandomIntForMultiply();
-    var c = a * b;
+    var a = getRandomForMultiply();
+    var b = getRandomForMultiply();
+    var c = a.times(b);
     
     $('#op').html(":");
-    assignUnknown(c,a,b);
+    assignUnknown(c.toString(),a.toString(),b.toString());
 }
 
 
@@ -270,6 +282,11 @@ function keypressFunc(x){
         is = is.slice(0,-1);
         if(is == ""){ is = "?"; }
         $(unknown.idname).html(is);
+    }else if(x == 190){
+        if(is == "?")
+            $(unknown.idname).html("0.");
+        else if(is.indexOf(".") == -1)
+            $(unknown.idname).html(is+".");
     }else if(x == 13){
         // this is the enter key
         var result = Number(is);
@@ -287,6 +304,7 @@ function keypressFunc(x){
             setTimeout(sameProblem,500);   // show for half second
         }
     }else{
+        //alert("Got "+x);
         return false;
     }
 
