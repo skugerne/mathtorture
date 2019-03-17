@@ -9,6 +9,8 @@ var incremental_score_drop = 5.5 / problems;
 var floating_increment = 0.0 / problems;         // suggested bonus: 500.0 / problems
 var floating_wrong_decrement = 100.0 / problems;
 var base_increment = 100.0 / problems;
+var multiply_with_fractions = true;
+var divide_with_fractions = false;
 
 
 
@@ -89,22 +91,29 @@ function assignUnknown(a, b, c){
 
 
 
-function getRandomForMultiply(){
+function getRandomForMultiply(with_fractions){
     /*
         Return a random Decimal object 0-9, and 0-9 multiplied by powers of 10.
     */
     
     var a = new Decimal(getRandomInt(1,10));
-    var b = new Decimal(getRandomInt(1,10));
-    if(b != 4 && b < 8){
-        // a *= 10 ** (4-b)
-        // so for b == 5, a is divided by 10
-        //        b == 6, a is divided by 100
-        //        b == 7, a is divided by 1000
-        //        b == 1, a is multiplied by 1000
-        //        b == 2, a is multiplied by 100
-        //        b == 3, a is multiplied by 10
-        a = a.times(new Decimal(10).toPower(b.minus(4).negated()));
+    if(with_fractions){
+        var b = new Decimal(getRandomInt(1,13));   // 50% chance of some power of 10 (inc fractions)
+        if(b != 4 && b < 8){
+            // a *= 10 ** (4-b)
+            // so for b == 5, a is divided by 10
+            //        b == 6, a is divided by 100
+            //        b == 7, a is divided by 1000
+            //        b == 1, a is multiplied by 1000
+            //        b == 2, a is multiplied by 100
+            //        b == 3, a is multiplied by 10
+            a = a.times(new Decimal(10).toPower(b.minus(4).negated()));
+        }
+    }else{
+        var b = new Decimal(getRandomInt(1,7));   // 50% chance of some power of 10
+        if(b < 4){
+            a = a.times(new Decimal(10).toPower(b.minus(4).negated()));
+        }
     }
     return a;
 }
@@ -112,8 +121,8 @@ function getRandomForMultiply(){
 
 
 function nextMultiplicationProblem(){
-    var a = getRandomForMultiply();
-    var b = getRandomForMultiply();
+    var a = getRandomForMultiply(multiply_with_fractions);
+    var b = getRandomForMultiply(multiply_with_fractions);
     var c = a.times(b);
     
     $('#op').html("&sdot;");
@@ -123,8 +132,8 @@ function nextMultiplicationProblem(){
 
 
 function nextDivisionProblem(){
-    var a = getRandomForMultiply();
-    var b = getRandomForMultiply();
+    var a = getRandomForMultiply(divide_with_fractions);
+    var b = getRandomForMultiply(divide_with_fractions);
     var c = a.times(b);
     
     $('#op').html(":");
