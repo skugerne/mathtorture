@@ -9,8 +9,10 @@ var incremental_score_drop = 5.5 / problems;
 var floating_increment = 0.0 / problems;         // suggested bonus: 500.0 / problems
 var floating_wrong_decrement = 100.0 / problems;
 var base_increment = 100.0 / problems;
+var multiply_with_decimals = true;
+var divide_with_decimals = true;
 var multiply_with_fractions = true;
-var divide_with_fractions = false;
+var divide_with_fractions = true;
 
 
 
@@ -52,7 +54,7 @@ function getRandomInt(min, max){
     */
     min = Math.ceil(min);
     max = Math.floor(max);
-    return new Fraction(Math.floor(Math.random() * (max - min)) + min);
+    return Math.floor(Math.random() * (max - min)) + min;
 }
 
 
@@ -91,14 +93,14 @@ function assignUnknown(a, b, c){
 
 
 
-function getRandomForMultiply(with_fractions){
+function getRandomForMultiply(with_decimals){
     /*
         Return a random Fraction object 0-9, and 0-9 multiplied by powers of 10.
     */
-    
-    var a = new Fraction(getRandomInt(1,10));
-    if(with_fractions){
-        var b = new Fraction(getRandomInt(1,13));   // 50% chance of some power of 10 (inc fractions)
+
+    var baseval = new Decimal(getRandomInt(1,10));
+    if(with_decimals){
+        var b = getRandomInt(1,13);   // 50% chance of some power of 10 (inc less than 1)
         if(b != 4 && b < 8){
             // a *= 10 ** (4-b)
             // so for b == 5, a is divided by 10
@@ -107,22 +109,23 @@ function getRandomForMultiply(with_fractions){
             //        b == 1, a is multiplied by 1000
             //        b == 2, a is multiplied by 100
             //        b == 3, a is multiplied by 10
-            a = a.mul(10 ** (4-b));
+            baseval = baseval.mul(10 ** (4-b));
         }
     }else{
-        var b = new Fraction(getRandomInt(1,7));   // 50% chance of some power of 10
+        var b = getRandomInt(1,7);   // 50% chance of some power of 10
         if(b < 4){
-            a = a.mul(10 ** (4-b));
+            baseval = baseval.mul(10 ** (4-b));
         }
     }
-    return a;
+
+    return baseval;
 }
 
 
 
 function nextMultiplicationProblem(){
-    var a = getRandomForMultiply(multiply_with_fractions);
-    var b = getRandomForMultiply(multiply_with_fractions);
+    var a = getRandomForMultiply(multiply_with_decimals);
+    var b = getRandomForMultiply(multiply_with_decimals);
     var c = a.mul(b);
     
     $('#op').html("&sdot;");
@@ -132,8 +135,8 @@ function nextMultiplicationProblem(){
 
 
 function nextDivisionProblem(){
-    var a = getRandomForMultiply(divide_with_fractions);
-    var b = getRandomForMultiply(divide_with_fractions);
+    var a = getRandomForMultiply(divide_with_decimals);
+    var b = getRandomForMultiply(divide_with_decimals);
     var c = a.mul(b);
 
     $('#op').html(":");
@@ -159,6 +162,8 @@ function nextAdditionProblem(){
         b = getRandomInt(1,10).mul(10 ** (b-10));
     }
 
+    a = Decimal(a)
+    b = Decimal(b)
     var c = a.add(b);
 
     $('#op').html("+");
@@ -183,6 +188,8 @@ function nextSubtractionProblem(){
         b = c;
     }
 
+    a = Decimal(a)
+    b = Decimal(b)
     var c = a.sub(b);
 
     $('#op').html("-");
@@ -251,12 +258,12 @@ function assignColors(){
 
 
 
-function fractionToHtml(frac){
+function numberToHtml(frac){
     /*
-        Given a Fraction, convert it into a suitable HTML representation.
+        Given a Decimal or Fraction, convert it into a suitable HTML representation.
     */
 
-    if(frac.d == 1){
+    if(frac instanceof Decimal || frac.d == 1){
         return frac.toString();
     }
 
@@ -278,8 +285,8 @@ function fractionToHtml(frac){
 
 function sameProblem(){
     assignColors();
-    $(number1.idname).html(fractionToHtml(number1.val));
-    $(number2.idname).html(fractionToHtml(number2.val));
+    $(number1.idname).html(numberToHtml(number1.val));
+    $(number2.idname).html(numberToHtml(number2.val));
     $(unknown.idname).html("?");
 }
 
