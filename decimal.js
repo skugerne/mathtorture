@@ -2,11 +2,11 @@
   'use strict';
 
 
-  /*
-   *  decimal.js v10.1.1
+  /*!
+   *  decimal.js v10.4.3
    *  An arbitrary-precision Decimal type for JavaScript.
    *  https://github.com/MikeMcl/decimal.js
-   *  Copyright (c) 2019 Michael Mclaughlin <M8ch88l@gmail.com>
+   *  Copyright (c) 2022 Michael Mclaughlin <M8ch88l@gmail.com>
    *  MIT Licence
    */
 
@@ -105,6 +105,7 @@
     invalidArgument = decimalError + 'Invalid argument: ',
     precisionLimitExceeded = decimalError + 'Precision limit exceeded',
     cryptoUnavailable = decimalError + 'crypto unavailable',
+    tag = '[object Decimal]',
 
     mathfloor = Math.floor,
     mathpow = Math.pow,
@@ -122,7 +123,7 @@
     PI_PRECISION = PI.length - 1,
 
     // Decimal.prototype object
-    P = { name: '[object Decimal]' };
+    P = { toStringTag: tag };
 
 
   // Decimal prototype methods
@@ -131,6 +132,7 @@
   /*
    *  absoluteValue             abs
    *  ceil
+   *  clampedTo                 clamp
    *  comparedTo                cmp
    *  cosine                    cos
    *  cubeRoot                  cbrt
@@ -209,6 +211,27 @@
    */
   P.ceil = function () {
     return finalise(new this.constructor(this), this.e + 1, 2);
+  };
+
+
+  /*
+   * Return a new Decimal whose value is the value of this Decimal clamped to the range
+   * delineated by `min` and `max`.
+   *
+   * min {number|string|Decimal}
+   * max {number|string|Decimal}
+   *
+   */
+  P.clampedTo = P.clamp = function (min, max) {
+    var k,
+      x = this,
+      Ctor = x.constructor;
+    min = new Ctor(min);
+    max = new Ctor(max);
+    if (!min.s || !max.s) return new Ctor(NaN);
+    if (min.gt(max)) throw Error(invalidArgument + max);
+    k = x.cmp(min);
+    return k < 0 ? min : x.cmp(max) > 0 ? max : new Ctor(x);
   };
 
 
@@ -317,7 +340,7 @@
     external = false;
 
     // Initial estimate.
-    s = x.s * Math.pow(x.s * x, 1 / 3);
+    s = x.s * mathpow(x.s * x, 1 / 3);
 
      // Math.cbrt underflow/overflow?
      // Pass x to Math.pow as integer, then adjust the exponent of the result.
@@ -327,7 +350,7 @@
 
       // Adjust n exponent so it is a multiple of 3 away from x exponent.
       if (s = (e - n.length + 1) % 3) n += (s == 1 || s == -2 ? '0' : '00');
-      s = Math.pow(n, 1 / 3);
+      s = mathpow(n, 1 / 3);
 
       // Rarely, e may be one less than the result exponent value.
       e = mathfloor((e + 1) / 3) - (e % 3 == (e < 0 ? -1 : 2));
@@ -546,7 +569,7 @@
     // TODO? Estimation reused from cosine() and may not be optimal here.
     if (len < 32) {
       k = Math.ceil(len / 3);
-      n = Math.pow(4, -k).toString();
+      n = (1 / tinyPow(4, k)).toString();
     } else {
       k = 16;
       n = '2.3283064365386962890625e-10';
@@ -626,8 +649,7 @@
       k = 1.4 * Math.sqrt(len);
       k = k > 16 ? 16 : k | 0;
 
-      x = x.times(Math.pow(5, -k));
-
+      x = x.times(1 / tinyPow(5, k));
       x = taylorSeries(Ctor, 2, x, x, true);
 
       // Reverse argument reduction
@@ -1729,7 +1751,7 @@
       e = mathfloor((e + 1) / 2) - (e < 0 || e % 2);
 
       if (s == 1 / 0) {
-        n = '1e' + e;
+        n = '5e' + e;
       } else {
         n = s.toExponential();
         n = n.slice(0, n.indexOf('e') + 1) + e;
@@ -2446,18 +2468,6 @@
   };
 
 
-  /*
-  // Add aliases to match BigDecimal method names.
-  // P.add = P.plus;
-  P.subtract = P.minus;
-  P.multiply = P.times;
-  P.divide = P.div;
-  P.remainder = P.mod;
-  P.compareTo = P.cmp;
-  P.negate = P.neg;
-   */
-
-
   // Helper functions for Decimal.prototype (P) and/or Decimal methods, and their callers.
 
 
@@ -2629,16 +2639,18 @@
    *
    */
   function cosine(Ctor, x) {
-    var k, y,
-      len = x.d.length;
+    var k, len, y;
+
+    if (x.isZero()) return x;
 
     // Argument reduction: cos(4x) = 8*(cos^4(x) - cos^2(x)) + 1
     // i.e. cos(x) = 8*(cos^4(x/4) - cos^2(x/4)) + 1
 
     // Estimate the optimum number of times to use the argument reduction.
+    len = x.d.length;
     if (len < 32) {
       k = Math.ceil(len / 3);
-      y = Math.pow(4, -k).toString();
+      y = (1 / tinyPow(4, k)).toString();
     } else {
       k = 16;
       y = '2.3283064365386962890625e-10';
@@ -3587,7 +3599,10 @@
   function parseOther(x, str) {
     var base, Ctor, divisor, i, isFloat, len, p, xd, xe;
 
-    if (str === 'Infinity' || str === 'NaN') {
+    if (str.indexOf('_') > -1) {
+      str = str.replace(/(\d)_(?=\d)/g, '$1');
+      if (isDecimal.test(str)) return parseDecimal(x, str);
+    } else if (str === 'Infinity' || str === 'NaN') {
       if (!+str) x.s = NaN;
       x.e = NaN;
       x.d = null;
@@ -3649,7 +3664,7 @@
     if (isFloat) x = divide(x, divisor, len * 4);
 
     // Multiply by the binary exponent part if present.
-    if (p) x = x.times(Math.abs(p) < 54 ? Math.pow(2, p) : Decimal.pow(2, p));
+    if (p) x = x.times(Math.abs(p) < 54 ? mathpow(2, p) : Decimal.pow(2, p));
     external = true;
 
     return x;
@@ -3665,7 +3680,9 @@
     var k,
       len = x.d.length;
 
-    if (len < 3) return taylorSeries(Ctor, 2, x, x);
+    if (len < 3) {
+      return x.isZero() ? x : taylorSeries(Ctor, 2, x, x);
+    }
 
     // Argument reduction: sin(5x) = 16*sin^5(x) - 20*sin^3(x) + 5*sin(x)
     // i.e. sin(x) = 16*sin^5(x/5) - 20*sin^3(x/5) + 5*sin(x/5)
@@ -3675,8 +3692,7 @@
     k = 1.4 * Math.sqrt(len);
     k = k > 16 ? 16 : k | 0;
 
-    // Max k before Math.pow precision loss is 22
-    x = x.times(Math.pow(5, -k));
+    x = x.times(1 / tinyPow(5, k));
     x = taylorSeries(Ctor, 2, x, x);
 
     // Reverse argument reduction
@@ -3726,6 +3742,14 @@
     t.d.length = k + 1;
 
     return t;
+  }
+
+
+  // Exponent e must be positive and non-zero.
+  function tinyPow(b, e) {
+    var n = b;
+    while (--e) n *= b;
+    return n;
   }
 
 
@@ -3924,6 +3948,7 @@
    *  atan2
    *  cbrt
    *  ceil
+   *  clamp
    *  clone
    *  config
    *  cos
@@ -3949,6 +3974,7 @@
    *  sinh
    *  sqrt
    *  sub
+   *  sum
    *  tan
    *  tanh
    *  trunc
@@ -4143,6 +4169,19 @@
 
 
   /*
+   * Return a new Decimal whose value is `x` clamped to the range delineated by `min` and `max`.
+   *
+   * x {number|string|Decimal}
+   * min {number|string|Decimal}
+   * max {number|string|Decimal}
+   *
+   */
+  function clamp(x, min, max) {
+    return new this(x).clamp(min, max);
+  }
+
+
+  /*
    * Configure global settings for a Decimal constructor.
    *
    * `obj` is an object with one or more of the following properties,
@@ -4255,7 +4294,7 @@
       x.constructor = Decimal;
 
       // Duplicate.
-      if (v instanceof Decimal) {
+      if (isDecimalInstance(v)) {
         x.s = v.s;
 
         if (external) {
@@ -4335,10 +4374,12 @@
       }
 
       // Minus sign?
-      if (v.charCodeAt(0) === 45) {
+      if ((i = v.charCodeAt(0)) === 45) {
         v = v.slice(1);
         x.s = -1;
       } else {
+        // Plus sign?
+        if (i === 43) v = v.slice(1);
         x.s = 1;
       }
 
@@ -4373,6 +4414,7 @@
     Decimal.atan2 = atan2;
     Decimal.cbrt = cbrt;          // ES6
     Decimal.ceil = ceil;
+    Decimal.clamp = clamp;
     Decimal.cos = cos;
     Decimal.cosh = cosh;          // ES6
     Decimal.div = div;
@@ -4395,6 +4437,7 @@
     Decimal.sinh = sinh;          // ES6
     Decimal.sqrt = sqrt;
     Decimal.sub = sub;
+    Decimal.sum = sum;
     Decimal.tan = tan;
     Decimal.tanh = tanh;          // ES6
     Decimal.trunc = trunc;        // ES6
@@ -4455,6 +4498,8 @@
    *
    * hypot(a, b, ...) = sqrt(a^2 + b^2 + ...)
    *
+   * arguments {number|string|Decimal}
+   *
    */
   function hypot() {
     var i, n,
@@ -4487,7 +4532,7 @@
    *
    */
   function isDecimalInstance(obj) {
-    return obj instanceof Decimal || obj && obj.name === '[object Decimal]' || false;
+    return obj instanceof Decimal || obj && obj.toStringTag === tag || false;
   }
 
 
@@ -4729,6 +4774,8 @@
    *  -0    if x is -0,
    *   NaN  otherwise
    *
+   * x {number|string|Decimal}
+   *
    */
   function sign(x) {
     x = new this(x);
@@ -4786,6 +4833,28 @@
 
 
   /*
+   * Return a new Decimal whose value is the sum of the arguments, rounded to `precision`
+   * significant digits using rounding mode `rounding`.
+   *
+   * Only the result is rounded, not the intermediate calculations.
+   *
+   * arguments {number|string|Decimal}
+   *
+   */
+  function sum() {
+    var i = 0,
+      args = arguments,
+      x = new this(args[i]);
+
+    external = false;
+    for (; x.s && ++i < args.length;) x = x.plus(args[i]);
+    external = true;
+
+    return finalise(x, this.precision, this.rounding);
+  }
+
+
+  /*
    * Return a new Decimal whose value is the tangent of `x`, rounded to `precision` significant
    * digits using rounding mode `rounding`.
    *
@@ -4822,7 +4891,7 @@
 
   // Create and configure initial Decimal constructor.
   Decimal = clone(DEFAULTS);
-
+  Decimal.prototype.constructor = Decimal;
   Decimal['default'] = Decimal.Decimal = Decimal;
 
   // Create the internal constants from their string values.
@@ -4842,7 +4911,7 @@
   // Node and other environments that support module.exports.
   } else if (typeof module != 'undefined' && module.exports) {
     if (typeof Symbol == 'function' && typeof Symbol.iterator == 'symbol') {
-      P[Symbol.for('nodejs.util.inspect.custom')] = P.toString;
+      P[Symbol['for']('nodejs.util.inspect.custom')] = P.toString;
       P[Symbol.toStringTag] = 'Decimal';
     }
 

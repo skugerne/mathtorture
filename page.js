@@ -1,5 +1,5 @@
-var number1 = {val: null, idstring: null};
-var number2 = {val: null, idstring: null};
+var number1 = {val: null, idstring: null, fracmult: null};
+var number2 = {val: null, idstring: null, fracmult: null};
 var unknown = {val: null, idstring: null};
 var problems = 100.0;
 var floating_score = 0;
@@ -21,20 +21,8 @@ function initPage(){
         if (event.defaultPrevented) {
             return; // Should do nothing if the default action has been cancelled
         }
-        
-        var handled = false;
-        if (event.keyCode !== undefined) {
-            // Handle the event with KeyboardEvent.keyCode and set handled true.
-            handled = keypressFunc(event.keyCode);
-        } else if (event.key !== undefined) {
-            // Handle the event with KeyboardEvent.key and set handled true.
-            alert("Not supported: event.key");
-        } else if (event.keyIdentifier !== undefined) {
-            // Handle the event with KeyboardEvent.keyIdentifier and set handled true.
-            alert("Not supported: event.keyIdentifier");
-        } else {
-            alert("Not supported: anything ??");
-        }
+
+        handled = keypressFunc(event.key);
 
         if (handled) {
             // Suppress "double action" if event handled
@@ -59,7 +47,7 @@ function getRandomInt(min, max){
 
 
 
-function assignUnknown(a, b, c){
+function assignUnknown(a, b, c, fracmult1, fracmult2){
     /*
     The unknown (shown as '?') can be in any of the three positions.
     */
@@ -89,6 +77,10 @@ function assignUnknown(a, b, c){
     }else{
         alert("Invalid random number "+choice+".");
     }
+
+    // store any relevant fraction inflations
+    number1.fracmult = fracmult1;
+    number2.fracmult = fracmult2;
 }
 
 
@@ -98,7 +90,7 @@ function getRandomForMultiply(with_decimals){
         Return a random Fraction object 0-9, and 0-9 multiplied by powers of 10.
     */
 
-    var baseval = new Decimal(getRandomInt(1,10));
+    var baseval = Decimal(getRandomInt(1,10));
     if(with_decimals){
         var b = getRandomInt(1,13);   // 50% chance of some power of 10 (inc less than 1)
         if(b != 4 && b < 8){
@@ -123,24 +115,46 @@ function getRandomForMultiply(with_decimals){
 
 
 
-function nextMultiplicationProblem(){
-    var a = getRandomForMultiply(multiply_with_decimals);
-    var b = getRandomForMultiply(multiply_with_decimals);
+function nextMultiOrDivideProblem(){
+
+    if(getRandomInt(1,3) == 1 || !multiply_with_fractions){
+        // the case without fractions (but maybe numbers less than 1)
+        var a = getRandomForMultiply(multiply_with_decimals);
+        var b = getRandomForMultiply(multiply_with_decimals);
+        var c = a.mul(b);
+        return [a,b,c,1,1];
+    }
+
+    // TODO: scenarios for fraction multiplication/division:
+    //   (1) easyish numbers without simplification possibility
+    //   (2) one fraction can be simplified top-vs-bottom
+    //   (3) the two fractions can be simplified accross
+
+    var a = Fraction(getRandomInt(1,6), getRandomInt(1,6))
+    var b = Fraction(getRandomInt(1,6), getRandomInt(1,6))
     var c = a.mul(b);
-    
+    var fracmult1 = getRandomInt(1,6)
+    if(getRandomInt(1,3) == 1)
+        var [fracmult1,fracmult2] = [getRandomInt(1,6), 1];
+    else
+        var [fracmult1,fracmult2] = [1, getRandomInt(1,6)];
+    return [a,b,c,fracmult1,fracmult2];
+}
+
+
+
+function nextMultiplicationProblem(){
+    var [a,b,c,fm1,fm2] = nextMultiOrDivideProblem();
     $('#op').html("&sdot;");
-    assignUnknown(a,b,c);
+    assignUnknown(a,b,c,fm1,fm2);
 }
 
 
 
 function nextDivisionProblem(){
-    var a = getRandomForMultiply(divide_with_decimals);
-    var b = getRandomForMultiply(divide_with_decimals);
-    var c = a.mul(b);
-
+    var [a,b,c,fm1,fm2] = nextMultiOrDivideProblem();
     $('#op').html(":");
-    assignUnknown(c,a,b);
+    assignUnknown(c,a,b,fm1,fm2);
 }
 
 
@@ -151,7 +165,7 @@ function nextAdditionProblem(){
         a = getRandomInt(1,10); // 1-5 "re-rolls" into the range 1-9
     }
     else if(a > 10){
-        a = getRandomInt(1,10).mul(10 ** (a-10));
+        a = getRandomInt(1,10) * (10 ** (a-10));
     }
 
     var b = getRandomInt(1,14);
@@ -159,7 +173,7 @@ function nextAdditionProblem(){
         b = getRandomInt(1,10); // 1-5 "re-rolls" into the range 1-9
     }
     else if(b > 10){
-        b = getRandomInt(1,10).mul(10 ** (b-10));
+        b = getRandomInt(1,10) * (10 ** (b-10));
     }
 
     a = Decimal(a)
@@ -167,7 +181,7 @@ function nextAdditionProblem(){
     var c = a.add(b);
 
     $('#op').html("+");
-    assignUnknown(a,b,c);
+    assignUnknown(a,b,c,1,1);
 }
 
 
@@ -175,12 +189,12 @@ function nextAdditionProblem(){
 function nextSubtractionProblem(){
     var a = getRandomInt(1,14);
     if(a > 10){
-        a = getRandomInt(1,10).mul(10 ** (a-10));
+        a = getRandomInt(1,10) * (10 ** (a-10));
     }
 
     var b = getRandomInt(1,14);
     if(b > 10){
-        b = getRandomInt(1,10).mul(10 ** (b-10));
+        b = getRandomInt(1,10) * (10 ** (b-10));
     }
     if(b > a){   // ensure non-negative result
         var c = a;
@@ -193,7 +207,7 @@ function nextSubtractionProblem(){
     var c = a.sub(b);
 
     $('#op').html("-");
-    assignUnknown(a,b,c);
+    assignUnknown(a,b,c,1,1);
 }
 
 
@@ -258,23 +272,26 @@ function assignColors(){
 
 
 
-function numberToHtml(frac){
+function numberToHtml(numinfo){
     /*
         Given a Decimal or Fraction, convert it into a suitable HTML representation.
     */
 
-    if(frac instanceof Decimal || frac.d == 1){
-        return frac.toString();
+    var val = numinfo.val;
+    var fracmult = numinfo.fracmult;
+
+    if(val instanceof Decimal || (val.d * fracmult) == 1){
+        return val.toString();
     }
 
     return `
         <math display="inline">
             <mfrac>
                 <mrow>
-                    <mn>${frac.n}</mn>
+                    <mn>${val.n * fracmult}</mn>
                 </mrow>
                 <mrow>
-                    <mn>${frac.d}</mn>
+                    <mn>${val.d * fracmult}</mn>
                 </mrow>
             </mfrac>
         </math>
@@ -284,9 +301,13 @@ function numberToHtml(frac){
 
 
 function sameProblem(){
+    /*
+        Show the values (either the same as last time, or new ones).
+    */
+
     assignColors();
-    $(number1.idname).html(numberToHtml(number1.val));
-    $(number2.idname).html(numberToHtml(number2.val));
+    $(number1.idname).html(numberToHtml(number1));
+    $(number2.idname).html(numberToHtml(number2));
     $(unknown.idname).html("?");
 }
 
@@ -308,30 +329,38 @@ function toHex(d) {
 function keypressFunc(x){
     var is = $(unknown.idname).html();
 
-    if(x >= 48 && x <= 57){
-        // number key pressed: 0 == 48, 1 == 49, etc
-        x -= 48;
-        
+    var numkey = Number(x);
+    if(x == '/' || !(isNaN(numkey) || x === null || x === ' ')){
+        // number key pressed
         if (is == "?" || is == "0"){
             is = ""+x;
         }else{
             is += x;
         }
         $(unknown.idname).html(is);
-    }else if(x == 8 || x == 46){
+    }else if(x == 'Backspace'){
         // this is the regular delete key
         is = is.slice(0,-1);
         if(is == ""){ is = "?"; }
         $(unknown.idname).html(is);
-    }else if(x == 190){
+    }else if(x == '.'){
         if(is == "?")
             $(unknown.idname).html("0.");
         else if(is.indexOf(".") == -1)
             $(unknown.idname).html(is+".");
-    }else if(x == 13){
+    }else if(x == 'Enter'){
         // this is the enter key
         var result = Number(is);
-        if(unknown.val == result){
+        var thecheck = (unknown.val == result);
+        if(isNaN(result)){
+            result = Fraction(is);
+            console.log("Interpreted string '"+is+"' as '"+result.toString()+"'.");
+            if(unknown.val instanceof Decimal)
+                thecheck = (Fraction(unknown.val.toFraction()).equals(result));
+            else
+                thecheck = (unknown.val.equals(result));
+        }
+        if(thecheck){
             base_score += base_increment;
             floating_score += floating_increment;
             $(unknown.idname).html("&#x263B;");
@@ -345,7 +374,6 @@ function keypressFunc(x){
             setTimeout(sameProblem,500);   // show for half second
         }
     }else{
-        //alert("Got "+x);
         return false;
     }
 

@@ -1,6 +1,7 @@
 The MIT Licence.
 
 Copyright (c) 2023 Robert Eisele
+Copyright (c) 2022 Michael Mclaughlin
 Copyright (c) 2005, 2014 jQuery Foundation, Inc. and other contributors
 
 Permission is hereby granted, free of charge, to any person obtaining
