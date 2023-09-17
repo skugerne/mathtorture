@@ -87,25 +87,26 @@ function assignUnknown(a, b, c, fracmult1, fracmult2){
 
 function getRandomForMultiply(with_decimals){
     /*
-        Return a random Fraction object 0-9, and 0-9 multiplied by powers of 10.
+        Return a random Decimal object 0-9, and 0-9 multiplied by powers of 10.
     */
 
     var baseval = Decimal(getRandomInt(1,10));
     if(with_decimals){
-        var b = getRandomInt(1,13);   // 50% chance of some power of 10 (inc less than 1)
-        if(b != 4 && b < 8){
-            // a *= 10 ** (4-b)
-            // so for b == 5, a is divided by 10
-            //        b == 6, a is divided by 100
-            //        b == 7, a is divided by 1000
-            //        b == 1, a is multiplied by 1000
-            //        b == 2, a is multiplied by 100
-            //        b == 3, a is multiplied by 10
-            baseval = baseval.mul(10 ** (4-b));
+        var b = getRandomInt(1,9);   // 50% chance of some power of 10 (inc less than 1)
+        if(b != 3 && b < 6){
+            // a *= 10 ** (3-b)
+            // so for b == 4, value is divided by 10
+            //        b == 5, value is divided by 100
+            //        b == 1, value is multiplied by 100
+            //        b == 2, value is multiplied by 10
+            baseval = baseval.mul(10 ** (3-b));
         }
     }else{
         var b = getRandomInt(1,7);   // 50% chance of some power of 10
         if(b < 4){
+            //        b == 1, value is multiplied by 1000
+            //        b == 2, value is multiplied by 100
+            //        b == 3, value is multiplied by 10
             baseval = baseval.mul(10 ** (4-b));
         }
     }
@@ -116,28 +117,32 @@ function getRandomForMultiply(with_decimals){
 
 
 function nextMultiOrDivideProblem(with_decimals, with_fractions){
+    /*
+        Choose the values for multiplication of division, which are set up the same way.
+    */
 
     if(getRandomInt(1,3) == 1 || !with_fractions){
         // the case without fractions (but maybe numbers less than 1)
+
         var a = getRandomForMultiply(with_decimals);
         var b = getRandomForMultiply(with_decimals);
         var c = a.mul(b);
         return [a,b,c,1,1];
     }
 
-    // TODO: scenarios for fraction multiplication/division:
-    //   (1) easyish numbers without simplification possibility
-    //   (2) one fraction can be simplified top-vs-bottom
-    //   (3) the two fractions can be simplified accross
-
     var a = Fraction(getRandomInt(1,6), getRandomInt(1,6))
     var b = Fraction(getRandomInt(1,6), getRandomInt(1,6))
     var c = a.mul(b);
-    var fracmult1 = getRandomInt(1,6)
-    if(getRandomInt(1,3) == 1)
-        var [fracmult1,fracmult2] = [getRandomInt(1,6), 1];
-    else
-        var [fracmult1,fracmult2] = [1, getRandomInt(1,6)];
+    var choice = getRandomInt(1,4);
+    if(choice == 1){
+        var [fracmult1,fracmult2] = [getRandomInt(2,6), 1];
+    }else if(choice == 2){
+        var [fracmult1,fracmult2] = [1, getRandomInt(2,6)];
+    }else{
+        // scale numbers of both fractions by 2, 3 or 4
+        choice = getRandomInt(2,5);
+        var [fracmult1,fracmult2] = [choice, choice];
+    }
     return [a,b,c,fracmult1,fracmult2];
 }
 
@@ -213,21 +218,25 @@ function nextSubtractionProblem(){
 
 
 function nextProblem(){
-    var choice = getRandomInt(1,7);
+    /*
+        Set up the next problem and get it displayed.
+    */
 
-    if(choice == 1 || choice == 2){
+    var choice = getRandomInt(1,9);
+
+    if(choice < 5){
         nextMultiplicationProblem();
-    }else if(choice == 3 || choice == 4){
+    }else if(choice == 5 || choice == 6){
         nextDivisionProblem();
-    }else if(choice == 5){
+    }else if(choice == 7){
         nextAdditionProblem();
-    }else if(choice == 6){
+    }else if(choice == 8){
         nextSubtractionProblem();
     }else{
         alert("Invalid random number "+choice+".");
     }
 
-    sameProblem();
+    displayTheProblem();
 }
 
 
@@ -300,7 +309,7 @@ function numberToHtml(numinfo){
 
 
 
-function sameProblem(){
+function displayTheProblem(){
     /*
         Show the values (either the same as last time, or new ones).
     */
@@ -371,7 +380,7 @@ function keypressFunc(x){
         }else{
             $(unknown.idname).html("&#x26D4;");
             floating_score -= floating_wrong_decrement;
-            setTimeout(sameProblem,500);   // show for half second
+            setTimeout(displayTheProblem,500);   // show for half second
         }
     }else{
         return false;
