@@ -115,12 +115,12 @@ function getRandomForMultiply(with_decimals){
 
 
 
-function nextMultiOrDivideProblem(){
+function nextMultiOrDivideProblem(with_decimals, with_fractions){
 
-    if(getRandomInt(1,3) == 1 || !multiply_with_fractions){
+    if(getRandomInt(1,3) == 1 || !with_fractions){
         // the case without fractions (but maybe numbers less than 1)
-        var a = getRandomForMultiply(multiply_with_decimals);
-        var b = getRandomForMultiply(multiply_with_decimals);
+        var a = getRandomForMultiply(with_decimals);
+        var b = getRandomForMultiply(with_decimals);
         var c = a.mul(b);
         return [a,b,c,1,1];
     }
@@ -144,7 +144,7 @@ function nextMultiOrDivideProblem(){
 
 
 function nextMultiplicationProblem(){
-    var [a,b,c,fm1,fm2] = nextMultiOrDivideProblem();
+    var [a,b,c,fm1,fm2] = nextMultiOrDivideProblem(multiply_with_decimals, multiply_with_decimals);
     $('#op').html("&sdot;");
     assignUnknown(a,b,c,fm1,fm2);
 }
@@ -152,7 +152,7 @@ function nextMultiplicationProblem(){
 
 
 function nextDivisionProblem(){
-    var [a,b,c,fm1,fm2] = nextMultiOrDivideProblem();
+    var [a,b,c,fm1,fm2] = nextMultiOrDivideProblem(divide_with_decimals, divide_with_fractions);
     $('#op').html(":");
     assignUnknown(c,a,b,fm1,fm2);
 }
